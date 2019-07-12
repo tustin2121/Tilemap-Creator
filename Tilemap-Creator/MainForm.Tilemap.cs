@@ -45,14 +45,15 @@ namespace TMC
             }
         }
 
-        private void DrawPalettemap(Graphics g)
-        {
-            DrawPalettemap(g, 0, 0, tilemap.Width, tilemap.Height);
-        }
-
-        private void DrawPalettemap(Graphics g, int boundsX, int boundsY, int boundsWidth, int boundsHeight)
+        private void DrawPalettemap(Graphics g, Rectangle clip)
         {
             if (!rModePalette.Checked) return;
+			if (zoom == 0) return; //avoid divide by zero
+
+			//int boundsX = clip.X / (8 * zoom);
+			//int boundsY = clip.Y / (8 * zoom);
+			//int boundsWidth = (clip.Width / (8 * zoom)) + 2;
+			//int boundsHeight = (clip.Height / (8 * zoom)) + 2;
 
             if (palettemapBrushes == null)
             {
@@ -64,9 +65,9 @@ namespace TMC
             if (palettemapFont == null)
                 palettemapFont = new Font("Arial", 5.5f, FontStyle.Regular);
 
-            for (int y = boundsY; y < boundsY + boundsHeight; y++)
+            for (int y = 0; y < tilemap.Height; y++)
             {
-                for (int x = boundsX; x < boundsX + boundsWidth; x++)
+                for (int x = 0; x < tilemap.Width; x++)
                 {
                     if (x < 0 || y < 0 || x >= tilemap.Width || y >= tilemap.Height)
                         continue;
@@ -83,7 +84,7 @@ namespace TMC
                         tilemap[x, y].Palette.ToString("X"),
                         palettemapFont,
                         Brushes.Black,
-                        1 + x * 8 * zoom,
+                        x * 8 * zoom + 1,
                         y * 8 * zoom
                     );
                 }
@@ -97,10 +98,7 @@ namespace TMC
             // Draw palettemap
             DrawPalettemap(
                 e.Graphics,
-                e.ClipRectangle.X / 8,
-                e.ClipRectangle.Y / 8,
-                e.ClipRectangle.Width / 8,
-                e.ClipRectangle.Height / 8
+                e.ClipRectangle
             );
 
             // Draw grid
@@ -112,17 +110,26 @@ namespace TMC
                     pen.DashPattern = new[] { 2f, 2f };
                     penS.DashPattern = new[] { 2f, 2f };
 
-                    int f = zoom * Tileset.TileSize;
+                    int size = zoom * Tileset.TileSize;
+					int off = (zoom) / 2;
 
-                    for (int x = 1; x < pTilemap.Width / f; x++)
+                    for (int x = 0; x < pTilemap.Width / size; x++)
                     {
-                        e.Graphics.DrawLine(x % 30 == 0 ? penS : pen, x * f, 0, x * f, pTilemap.Height);
-                    }
+						e.Graphics.DrawLine(x % 30 == 0 ? penS : pen, 
+							x * size - off, 
+							0, 
+							x * size - off, 
+							pTilemap.Height);
+					}
 
-                    for (int y = 1; y < pTilemap.Height / f; y++)
+                    for (int y = 0; y < pTilemap.Height / size; y++)
                     {
-                        e.Graphics.DrawLine(y % 20 == 0 ? penS : pen, 0, y * f, pTilemap.Width, y * f);
-                    }
+						e.Graphics.DrawLine(y % 20 == 0 ? penS : pen, 
+							0, 
+							y * size - off, 
+							pTilemap.Width,
+							y * size - off);
+					}
                 }
             }
 
@@ -133,20 +140,20 @@ namespace TMC
                 {
                     e.Graphics.DrawRectangle(
                         Pens.Red,
-                        tilemapMouseCurrent.X * zoom * 8,
-                        tilemapMouseCurrent.Y * zoom * 8,
-                        tilesetSelection.Width * zoom * 8 - 1,
-                        tilesetSelection.Height * zoom * 8 - 1
+                        tilemapMouseCurrent.X * zoom * 8 - (zoom/2),
+                        tilemapMouseCurrent.Y * zoom * 8 - (zoom/2),
+                        tilesetSelection.Width * zoom * 8,
+                        tilesetSelection.Height * zoom * 8
                     );
                 }
                 else
                 {
                     e.Graphics.DrawRectangle(
                         Pens.Red,
-                        tilemapMouseCurrent.X * zoom * 8,
-                        tilemapMouseCurrent.Y * zoom * 8,
-                        zoom * 8 - 1,
-                        zoom * 8 - 1
+                        tilemapMouseCurrent.X * zoom * 8 - (zoom/2),
+                        tilemapMouseCurrent.Y * zoom * 8 - (zoom/2),
+                        zoom * 8,
+                        zoom * 8
                     );
                 }
             }

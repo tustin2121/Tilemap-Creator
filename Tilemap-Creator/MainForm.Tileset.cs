@@ -117,29 +117,30 @@ namespace TMC
                     {
                         pen.DashPattern = new[] { 2f, 2f };
 
-                        int f = zoom * Tileset.TileSize;
+                        int size = zoom * Tileset.TileSize;
+						int off = zoom / 2;
 
-                        for (int x = 1; x < pTileset.Width / f; x++)
+                        for (int x = 1; x < pTileset.Width / size; x++)
                         {
-                            e.Graphics.DrawLine(pen, x * f, 0, x * f, pTileset.Height);
+                            e.Graphics.DrawLine(pen, x * size - off, 0, x * size - off, pTileset.Height);
                         }
 
-                        for (int y = 1; y < pTileset.Height / f; y++)
+                        for (int y = 1; y < pTileset.Height / size; y++)
                         {
-                            e.Graphics.DrawLine(pen, 0, y * f, pTileset.Width, y * f);
+                            e.Graphics.DrawLine(pen, 0, y * size - off, pTileset.Width, y * size - off);
                         }
                     }
                 }
 
                 // draw current selection
                 e.Graphics.DrawRectangle
-                        (
-                        Pens.Yellow,
-                        tilesetSelection.X * zoom * Tileset.TileSize,
-                        tilesetSelection.Y * zoom * Tileset.TileSize,
-                        tilesetSelection.Width * zoom * Tileset.TileSize - 1,
-                        tilesetSelection.Height * zoom * Tileset.TileSize - 1
-                        );
+				(
+                    Pens.Yellow,
+                    tilesetSelection.X * zoom * Tileset.TileSize - (zoom/2),
+                    tilesetSelection.Y * zoom * Tileset.TileSize - (zoom/2),
+                    tilesetSelection.Width * zoom * Tileset.TileSize,
+                    tilesetSelection.Height * zoom * Tileset.TileSize
+				);
 
                 if (tilesetMouseDown)
                 { 
@@ -155,26 +156,26 @@ namespace TMC
                         bottomRight.X - upperLeft.X + 1, bottomRight.Y - upperLeft.Y + 1);
 
                     e.Graphics.DrawRectangle
-                        (
+					(
                         Pens.Red,
-                        bounds.X * zoom * Tileset.TileSize,
-                        bounds.Y * zoom * Tileset.TileSize,
-                        bounds.Width * zoom * Tileset.TileSize - 1,
-                        bounds.Height * zoom * Tileset.TileSize - 1
-                        );
+                        bounds.X * zoom * Tileset.TileSize - (zoom/2),
+                        bounds.Y * zoom * Tileset.TileSize - (zoom/2),
+                        bounds.Width * zoom * Tileset.TileSize,
+                        bounds.Height * zoom * Tileset.TileSize
+                    );
                 }
             }
             else
             {
                 // draw selection
                 e.Graphics.DrawRectangle
-                    (
+				(
                     Pens.Red,
                     paletteSelection % 4 * zoom * 8, 
                     paletteSelection / 4 * zoom * 8, 
                     zoom * 7, 
                     zoom * 7
-                    );
+                );
             }
         }
 
