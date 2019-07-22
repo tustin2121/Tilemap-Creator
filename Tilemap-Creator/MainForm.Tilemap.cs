@@ -14,10 +14,16 @@ namespace TMC
         private Tilemap tilemap;
         private DirectBitmap tilemapImage;
 
+        private Point tilemapMouseAnchor = new Point(-1, -1);
         private Point tilemapMouseCurrent = new Point(-1, -1);
+		
+		private EditMode editMode = EditMode.Pencil;
+		private Random rand = new Random();
 
-        // Updates Tilemap image (forced redraw)
-        private void UpdateTilemap()
+		#region Drawing
+
+		// Updates Tilemap image (forced redraw)
+		private void UpdateTilemap()
         {
             if (tilemap != null && tileset != null)
             {
@@ -134,17 +140,40 @@ namespace TMC
             }
 
             // Draw cursor based on tileset/palette selection
-            if (tilemapMouseCurrent.X >= 0 && tilemapMouseCurrent.Y >= 0)
-            {
-                if (rModeTilemap.Checked)
+            if (tilemapMouseAnchor.X >= 0 && tilemapMouseAnchor.Y >= 0) {
+				if (InTileMappingMode)
                 {
-                    e.Graphics.DrawRectangle(
-                        Pens.Red,
-                        tilemapMouseCurrent.X * zoom * 8 - (zoom/2),
-                        tilemapMouseCurrent.Y * zoom * 8 - (zoom/2),
-                        tilesetSelection.Width * zoom * 8,
-                        tilesetSelection.Height * zoom * 8
-                    );
+					Point top = tilemapMouseAnchor;
+					if (tilemapMouseCurrent.X < tilemapMouseAnchor.X || tilemapMouseCurrent.Y < tilemapMouseAnchor.Y) {
+						top = tilemapMouseCurrent;
+					}
+					Rectangle r = new Rectangle {
+						X = top.X * zoom * Tileset.TileSize - (zoom/2), 
+						Y = top.Y * zoom * Tileset.TileSize - (zoom/2), 
+						Width = tilesetSelection.Width * zoom * Tileset.TileSize,
+						Height = tilesetSelection.Height * zoom * Tileset.TileSize,
+					};
+					e.Graphics.DrawRectangle(Pens.Red, r);
+				}
+			} 
+			else if (tilemapMouseCurrent.X >= 0 && tilemapMouseCurrent.Y >= 0) {
+                if (InTileMappingMode)
+                {
+					Rectangle r = new Rectangle{
+						X = tilemapMouseCurrent.X * zoom * Tileset.TileSize - (zoom/2), 
+						Y = tilemapMouseCurrent.Y * zoom * Tileset.TileSize - (zoom/2), 
+						Width = tilesetSelection.Width * zoom * Tileset.TileSize,
+						Height = tilesetSelection.Height * zoom * Tileset.TileSize,
+					};
+					e.Graphics.DrawRectangle(Pens.Red, r);
+
+                    //e.Graphics.DrawRectangle(
+                    //    Pens.Red,
+                    //    tilemapMouseCurrent.X * zoom * 8 - (zoom/2),
+                    //    tilemapMouseCurrent.Y * zoom * 8 - (zoom/2),
+                    //    tilesetSelection.Width * zoom * 8,
+                    //    tilesetSelection.Height * zoom * 8
+                    //);
                 }
                 else
                 {
@@ -159,8 +188,201 @@ namespace TMC
             }
         }
 
-        private void pTilemap_MouseDown(object sender, MouseEventArgs e)
+		#endregion
+
+		#region Editing
+
+		private void MouseEditTileMap_PencilMode() {
+			if (InTileMappingMode)
+			{
+				// set selection rectangle
+				for (int x = 0; x < tilesetSelection.Width; x++)
+				{
+					for (int y = 0; y < tilesetSelection.Height; y++)
+					{
+						// tilemap position
+						var mapX = tilemapMouseCurrent.X + x;
+						var mapY = tilemapMouseCurrent.Y + y;
+
+						if (mapX < 0 || mapX >= tilemap.Width || mapY < 0 || mapY >= tilemap.Height)
+							continue;
+
+						// tile at position
+						var tile = tilesetSelection[x, y];
+
+						// ilegal tiles default to 0
+						if (tile.Index >= tileset.Length)
+							tile.Index = 0;
+
+						// set selection
+						tilemap[mapX, mapY] = tile;
+						//tilemap[mapX, mapY].FlipX = btnTilesetFlipX.Checked;
+						//tilemap[mapX, mapY].FlipY = btnTilesetFlipY.Checked;
+					}
+				}    
+			}
+			else
+			{
+				// set palette selection
+                tilemap[tilemapMouseCurrent.X, tilemapMouseCurrent.Y].Palette = (byte)paletteSelection;
+			}
+		}
+
+
+		private void MouseEditTileMap_FillMode() {
+			// https://rosettacode.org/wiki/Bitmap/Flood_fill#C.23
+
+			var queue = new Queue<Point>();
+
+			// Fills all tiles going out from X, Y with the first tile selected
+			if (InTileMappingMode)
+			{
+				var dst = tilesetSelection[0,0];
+				var src = tilemap[tilemapMouseCurrent];
+				if (src == dst) return;
+
+				// create a queue to hold points
+				queue.Enqueue(tilemapMouseCurrent);
+
+				// queues all tiles left and right of x,y and such
+				while (queue.Count > 0)
+				{
+					var n = queue.Dequeue();
+					if (tilemap[n] != src)
+						continue;
+
+					Point w = n, e = new Point(n.X + 1, n.Y);
+					while (w.X >= 0 && tilemap[w] == src)
+					{
+						tilemap[w] = dst;
+						if (w.Y > 0 && tilemap[w.X, w.Y - 1] == src)
+							queue.Enqueue(new Point(w.X, w.Y - 1));
+						if (w.Y < tilemap.Height - 1 && tilemap[w.X, w.Y + 1] == src)
+							queue.Enqueue(new Point(w.X, w.Y + 1));
+						w.X--;
+					}
+
+					while (e.X <= tilemap.Width - 1 && tilemap[e] == src)
+					{
+						tilemap[e] = dst;
+						if (e.Y > 0 && tilemap[e.X, e.Y - 1] == src)
+							queue.Enqueue(new Point(e.X, e.Y - 1));
+						if (e.Y < tilemap.Height - 1 && tilemap[e.X, e.Y + 1] == src)
+							queue.Enqueue(new Point(e.X, e.Y + 1));
+						e.X++;
+					}
+				}
+
+				// Redraw entire tilemap (unknown amount of tiles changed)
+				tilemap.Draw(tilemapImage, tileset, 0, 0, tilemap.Width, tilemap.Height);
+			}
+			else
+			{
+				var dst = paletteSelection;
+				var src = tilemap[tilemapMouseCurrent].Palette;
+				if (src == dst) return;
+				// create a queue to hold points
+				queue.Enqueue(tilemapMouseCurrent);
+
+				// queues all tiles left and right of x,y and such
+				while (queue.Count > 0)
+				{
+					var n = queue.Dequeue();
+					if (tilemap[n].Palette != src)
+						continue;
+
+					Point w = n, e = new Point(n.X + 1, n.Y);
+					while (w.X >= 0 && tilemap[w].Palette == src)
+					{
+						tilemap[w].Palette = (byte)dst;
+						if (w.Y > 0 && tilemap[w.X, w.Y - 1].Palette == src)
+							queue.Enqueue(new Point(w.X, w.Y - 1));
+						if (w.Y < tilemap.Height - 1 && tilemap[w.X, w.Y + 1].Palette == src)
+							queue.Enqueue(new Point(w.X, w.Y + 1));
+						w.X--;
+					}
+
+					while (e.X <= tilemap.Width - 1 && tilemap[e].Palette == src)
+					{
+						tilemap[e].Palette = (byte)dst;
+						if (e.Y > 0 && tilemap[e.X, e.Y - 1].Palette == src)
+							queue.Enqueue(new Point(e.X, e.Y - 1));
+						if (e.Y < tilemap.Height - 1 && tilemap[e.X, e.Y + 1].Palette == src)
+							queue.Enqueue(new Point(e.X, e.Y + 1));
+						e.X++;
+					}
+				}
+
+				// Redraw entire tilemap (unknown amount of tiles changed)
+				tilemap.Draw(tilemapImage, tileset, 0, 0, tilemap.Width, tilemap.Height);
+			}
+		}
+
+		private void MouseEditTileMap_RectangleMode() {
+			// TODO
+		}
+
+		private void MouseEditTileMap_RandomMode() {
+			if (!InTileMappingMode) return;
+			// set selection rectangle
+			for (int x = 0; x < tilesetSelection.Width; x++)
+			{
+				for (int y = 0; y < tilesetSelection.Height; y++)
+				{
+					// tilemap position
+					var mapX = tilemapMouseCurrent.X + x;
+					var mapY = tilemapMouseCurrent.Y + y;
+
+					if (mapX < 0 || mapX >= tilemap.Width || mapY < 0 || mapY >= tilemap.Height)
+						continue;
+
+					// tileset position
+					var setX = rand.Next(tilesetSelection.Width);
+					var setY = rand.Next(tilesetSelection.Height);
+
+					// tile at position
+					var tile = tilesetSelection[setX, setY];
+
+					// ilegal tiles default to 0
+					if (tile.Index >= tileset.Length)
+						tile.Index = 0;
+
+					// set selection
+					tilemap[mapX, mapY] = tile;
+					//tilemap[mapX, mapY].FlipX = btnTilesetFlipX.Checked;
+					//tilemap[mapX, mapY].FlipY = btnTilesetFlipY.Checked;
+				}
+			}       
+		}
+
+		private void MouseEditTileMap()
+		{
+			switch (this.editMode)
+			{
+				case EditMode.Pencil:
+					MouseEditTileMap_PencilMode();
+					break;
+				case EditMode.Fill:
+					MouseEditTileMap_FillMode();
+					break;
+				case EditMode.Rectangle:
+					MouseEditTileMap_RectangleMode();
+					break;
+				case EditMode.Random:
+					MouseEditTileMap_RandomMode();
+					break;
+			}
+		}
+
+		#endregion
+
+		#region Mouse Handling
+
+		private void pTilemap_MouseDown(object sender, MouseEventArgs e)
         {
+			tilemapMouseAnchor.X = e.X / (zoom * Tileset.TileSize);
+			tilemapMouseAnchor.Y = e.Y / (zoom * Tileset.TileSize);
+
             pTilemap_MouseMove(sender, e);
         }
 
@@ -173,7 +395,7 @@ namespace TMC
             tilemapMouseCurrent.X = me.X / (zoom * Tileset.TileSize);
             tilemapMouseCurrent.Y = me.Y / (zoom * Tileset.TileSize);
 
-            lPosition.Text = rModeTilemap.Checked ?
+            lPosition.Text = InTileMappingMode ?
                 $"Tilemap: ({tilemapMouseCurrent.X}, {tilemapMouseCurrent.Y})" :
                 $"Palettemap: ({tilemapMouseCurrent.X}, {tilemapMouseCurrent.Y})";
 
@@ -186,53 +408,10 @@ namespace TMC
             lPalette.Text = $"Palette: {mousedTile.Palette:X}";
             lFlip.Text = "Flip: " + (mousedTile.FlipX ? mousedTile.FlipY ? "XY" : "X" : mousedTile.FlipY ? "Y" : "None");
 
-            // Get tileset width
-            short tilesetWidth;
-            if (!short.TryParse(cmbTilesetWidth.Text, out tilesetWidth) || tilesetWidth <= 0)
-                tilesetWidth = 1;
-
             // Set tiles starting from X, Y
             if (me.Button == MouseButtons.Left)
             {
-                if (rModeTilemap.Checked)
-                {
-                    var tilesPerRow = tilesetWidth;
-
-                    // set selection rectangle
-                    for (int x = 0; x < tilesetSelection.Width; x++)
-                    {
-                        for (int y = 0; y < tilesetSelection.Height; y++)
-                        {
-                            // tilemap position
-                            var mapX = tilemapMouseCurrent.X + x;
-                            var mapY = tilemapMouseCurrent.Y + y;
-
-                            if (mapX < 0 || mapX >= tilemap.Width || mapY < 0 || mapY >= tilemap.Height)
-                                continue;
-
-                            // tileset position -- accounts for X/Y flipping
-                            var setX = tilesetSelection.X + (btnTilesetFlipX.Checked ? tilesetSelection.Width - 1 - x : x);
-                            var setY = tilesetSelection.Y + (btnTilesetFlipY.Checked ? tilesetSelection.Height - 1 - y : y);
-
-                            // tile at position
-                            var tile = setX + setY * tilesPerRow;
-
-                            // ilegal tiles default to 0
-                            if (tile >= tileset.Length)
-                                tile = 0;
-
-                            // set selection
-                            tilemap[mapX, mapY].Index = (short)tile;
-                            tilemap[mapX, mapY].FlipX = btnTilesetFlipX.Checked;
-                            tilemap[mapX, mapY].FlipY = btnTilesetFlipY.Checked;
-                        }
-                    }                  
-                }
-                else
-                {
-                    // set palette selection
-                    tilemap[tilemapMouseCurrent.X, tilemapMouseCurrent.Y].Palette = (byte)paletteSelection;
-                }
+				MouseEditTileMap();
 
                 // redraw just the portion of the tilemap that was edited
                 tilemap.Draw(tilemapImage, tileset, tilemapMouseCurrent.X, tilemapMouseCurrent.Y,
@@ -241,112 +420,38 @@ namespace TMC
             // Get tile at X, Y -- overrides selection
             else if (me.Button == MouseButtons.Right)
             {
-                if (rModeTilemap.Checked)
+                if (InTileMappingMode)
                 {
-                    var t = tilemap[tilemapMouseCurrent];
-                    var w = tilesetWidth;
+					Point a = tilemapMouseAnchor;
+					Point b = tilemapMouseCurrent;
+					if (b.X < a.X || b.Y < a.Y) {
+						a = tilemapMouseCurrent;
+						b = tilemapMouseAnchor;
+					}
+					tilesetSelection.SizeTo(a, b);
+					for (int x = 0; x < tilesetSelection.Width; x++) {
+						for (int y = 0; y < tilesetSelection.Height; y++) {
+							tilesetSelection[x, y] = tilemap[a.X + x, a.Y + y];
+						}
+					}
 
-                    tilesetSelection = new Rectangle(t.Index % w, t.Index / w, 1, 1);
-                    btnTilesetFlipX.Checked = t.FlipX;
-                    btnTilesetFlipY.Checked = t.FlipY;
-                }
+					//var t = tilemap[tilemapMouseCurrent];
+					//var w = tilesetWidth;
+
+					//tilesetSelection.Set(t.Index % w, t.Index / w, 1, 1);
+					btnTilesetFlipX.Checked = false;
+					btnTilesetFlipY.Checked = false;
+				}
                 else
                 {
                     paletteSelection = tilemap[tilemapMouseCurrent].Palette;
                 }
 
-                lTilesetSelection.Text = rModeTilemap.Checked ?
+                lTilesetSelection.Text = InTileMappingMode ?
                         $"({tilesetSelection.X}, {tilesetSelection.Y}) to ({tilesetSelection.X + tilesetSelection.Width - 1}, {tilesetSelection.Y + tilesetSelection.Height - 1})" :
                         $"{paletteSelection}";
 
                 pTileset.Invalidate();
-            }
-            // Flood fill
-            // https://rosettacode.org/wiki/Bitmap/Flood_fill#C.23
-            else if (me.Button == MouseButtons.Middle)
-            {
-                var dst = rModeTilemap.Checked ?
-                    (tilesetSelection.X + tilesetSelection.Y * tilesetWidth) : paletteSelection;
-                var src = rModeTilemap.Checked ?
-                    tilemap[tilemapMouseCurrent].Index : tilemap[tilemapMouseCurrent].Palette;
-
-                var queue = new Queue<Point>();
-
-                // Fills all tiles going out from X, Y with the first tile selected
-                if (src != dst)
-                {
-                    if (rModeTilemap.Checked)
-                    {
-                        // create a queue to hold points
-                        queue.Enqueue(tilemapMouseCurrent);
-
-                        // queues all tiles left and right of x,y and such
-                        while (queue.Count > 0)
-                        {
-                            var n = queue.Dequeue();
-                            if (tilemap[n].Index != src)
-                                continue;
-
-                            Point w = n, e = new Point(n.X + 1, n.Y);
-                            while (w.X >= 0 && tilemap[w].Index == src)
-                            {
-                                tilemap[w].Index = (short)dst;
-                                if (w.Y > 0 && tilemap[w.X, w.Y - 1].Index == src)
-                                    queue.Enqueue(new Point(w.X, w.Y - 1));
-                                if (w.Y < tilemap.Height - 1 && tilemap[w.X, w.Y + 1].Index == src)
-                                    queue.Enqueue(new Point(w.X, w.Y + 1));
-                                w.X--;
-                            }
-
-                            while (e.X <= tilemap.Width - 1 && tilemap[e].Index == src)
-                            {
-                                tilemap[e].Index = (short)dst;
-                                if (e.Y > 0 && tilemap[e.X, e.Y - 1].Index == src)
-                                    queue.Enqueue(new Point(e.X, e.Y - 1));
-                                if (e.Y < tilemap.Height - 1 && tilemap[e.X, e.Y + 1].Index == src)
-                                    queue.Enqueue(new Point(e.X, e.Y + 1));
-                                e.X++;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        // create a queue to hold points
-                        queue.Enqueue(tilemapMouseCurrent);
-
-                        // queues all tiles left and right of x,y and such
-                        while (queue.Count > 0)
-                        {
-                            var n = queue.Dequeue();
-                            if (tilemap[n].Palette != src)
-                                continue;
-
-                            Point w = n, e = new Point(n.X + 1, n.Y);
-                            while (w.X >= 0 && tilemap[w].Palette == src)
-                            {
-                                tilemap[w].Palette = (byte)dst;
-                                if (w.Y > 0 && tilemap[w.X, w.Y - 1].Palette == src)
-                                    queue.Enqueue(new Point(w.X, w.Y - 1));
-                                if (w.Y < tilemap.Height - 1 && tilemap[w.X, w.Y + 1].Palette == src)
-                                    queue.Enqueue(new Point(w.X, w.Y + 1));
-                                w.X--;
-                            }
-
-                            while (e.X <= tilemap.Width - 1 && tilemap[e].Palette == src)
-                            {
-                                tilemap[e].Palette = (byte)dst;
-                                if (e.Y > 0 && tilemap[e.X, e.Y - 1].Palette == src)
-                                    queue.Enqueue(new Point(e.X, e.Y - 1));
-                                if (e.Y < tilemap.Height - 1 && tilemap[e.X, e.Y + 1].Palette == src)
-                                    queue.Enqueue(new Point(e.X, e.Y + 1));
-                                e.X++;
-                            }
-                        }
-                    }
-
-                    // Redraw entire tilemap (unknown amount of tiles changed)
-                    tilemap.Draw(tilemapImage, tileset, 0, 0, tilemap.Width, tilemap.Height);
-                }
             }
 
             //end:
@@ -358,6 +463,14 @@ namespace TMC
             tilemapMouseCurrent.X = -1;
             pTilemap.Invalidate();
         }
+		
+		private void pTilemap_MouseUp(object sender, MouseEventArgs e) 
+		{
+			tilemapMouseAnchor.X = -1;
+			tilemapMouseAnchor.Y = -1;
+		}
+		
+		#endregion
 
         private void rMode_CheckedChanged(object sender, EventArgs e)
         {
@@ -368,7 +481,22 @@ namespace TMC
             UpdateTilemap();
         }
 
-        private void textTilemapWidth_KeyPress(object sender, KeyPressEventArgs e)
+		private bool InTileMappingMode {
+			get => rModeTilemap.Checked;
+		}
+		
+		private void changeEditMode(EditMode mode) 
+		{
+			this.editMode = mode;
+			btnEditModePencil.Checked = this.editMode == EditMode.Pencil;
+			btnEditModeRect.Checked = this.editMode == EditMode.Rectangle;
+			btnEditModeRandom.Checked = this.editMode == EditMode.Random;
+			btnEditModeFill.Checked = this.editMode == EditMode.Fill;
+		}
+
+		#region Button Handlers
+
+		private void textTilemapWidth_KeyPress(object sender, KeyPressEventArgs e)
         {
             if (!(char.IsDigit(e.KeyChar) || char.IsControl(e.KeyChar)))
             {
@@ -439,5 +567,26 @@ namespace TMC
                 UpdateTilemap();
             }
         }
+
+		private void btnEditModePencil_Click(object sender, EventArgs e) 
+		{
+			changeEditMode(EditMode.Pencil);
+		}
+
+		private void btnEditModeRect_Click(object sender, EventArgs e) 
+		{
+			changeEditMode(EditMode.Rectangle);
+		}
+
+		private void btnEditModeRandom_Click(object sender, EventArgs e) 
+		{
+			changeEditMode(EditMode.Random);
+		}
+
+		private void btnEditModeFill_Click(object sender, EventArgs e) {
+			changeEditMode(EditMode.Fill);
+		}
+
+		#endregion
     }
 }

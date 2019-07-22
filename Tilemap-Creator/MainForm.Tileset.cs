@@ -14,7 +14,8 @@ namespace TMC
         Tileset tileset;
         DirectBitmap tilesetImage;
 
-        Rectangle tilesetSelection = new Rectangle(0, 0, 1, 1);
+		TilesetSelection tilesetSelection = new TilesetSelection();
+        //Rectangle tilesetSelection = new Rectangle(0, 0, 1, 1);
 
         Point tilesetMouseStart = new Point(-1, -1), tilesetMouseCurrent = new Point(-1, -1);
         bool tilesetMouseDown = false;
@@ -69,7 +70,8 @@ namespace TMC
                 pTileset.Image = tilesetImage;
 
                 if (clearSelection)
-                    tilesetSelection = new Rectangle(0, 0, 1, 1);
+                    tilesetSelection.Clear();
+				tilesetSelection.TilesetWrap = width;
 
                 lTilesetSelection.Text = rModeTilemap.Checked ?
                     $"({tilesetSelection.X}, {tilesetSelection.Y}) to ({tilesetSelection.X + tilesetSelection.Width - 1}, {tilesetSelection.Y + tilesetSelection.Height - 1})" :
@@ -133,14 +135,17 @@ namespace TMC
                 }
 
                 // draw current selection
-                e.Graphics.DrawRectangle
-				(
-                    Pens.Yellow,
-                    tilesetSelection.X * zoom * Tileset.TileSize - (zoom/2),
-                    tilesetSelection.Y * zoom * Tileset.TileSize - (zoom/2),
-                    tilesetSelection.Width * zoom * Tileset.TileSize,
-                    tilesetSelection.Height * zoom * Tileset.TileSize
-				);
+				if (tilesetSelection.IsConsecutive)
+				{
+					e.Graphics.DrawRectangle
+					(
+						Pens.Yellow,
+						tilesetSelection.X * zoom * Tileset.TileSize - (zoom/2),
+						tilesetSelection.Y * zoom * Tileset.TileSize - (zoom/2),
+						tilesetSelection.Width * zoom * Tileset.TileSize,
+						tilesetSelection.Height * zoom * Tileset.TileSize
+					);
+				}
 
                 if (tilesetMouseDown)
                 { 
@@ -233,7 +238,7 @@ namespace TMC
                         Math.Max(tilesetMouseCurrent.Y, tilesetMouseStart.Y));
 
                     // create selection rect
-                    tilesetSelection = new Rectangle(upperLeft.X, upperLeft.Y,
+                    tilesetSelection.Set(upperLeft.X, upperLeft.Y,
                         bottomRight.X - upperLeft.X + 1, bottomRight.Y - upperLeft.Y + 1);
 
                     lTilesetSelection.Text = rModeTilemap.Checked ?
@@ -275,5 +280,13 @@ namespace TMC
                 UpdateTileset(true);
             }
         }
+		
+		private void btnTilesetFlipX_Click(object sender, EventArgs e) {
+			tilesetSelection.FlippedX = btnTilesetFlipX.Checked;
+		}
+
+		private void btnTilesetFlipY_Click(object sender, EventArgs e) {
+			tilesetSelection.FlippedY = btnTilesetFlipY.Checked;
+		}
     }
 }

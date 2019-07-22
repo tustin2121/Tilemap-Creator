@@ -23,4 +23,12 @@
         /// </summary>
         GPL, // GIMP palette uses the same extension
     }
+
+	public enum EditMode 
+	{
+		Pencil,
+		Fill,
+		Rectangle,
+		Random,
+	}
 }

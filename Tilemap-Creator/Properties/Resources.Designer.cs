@@ -103,6 +103,26 @@ namespace TMC.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap FilledRectangleTool_214 {
+            get {
+                object obj = ResourceManager.GetObject("FilledRectangleTool_214", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap FillTool_204 {
+            get {
+                object obj = ResourceManager.GetObject("FillTool_204", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap image_resize {
             get {
                 object obj = ResourceManager.GetObject("image_resize", resourceCulture);
@@ -126,6 +146,36 @@ namespace TMC.Properties {
         internal static System.Drawing.Bitmap layer_flip_vertical {
             get {
                 object obj = ResourceManager.GetObject("layer_flip_vertical", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap PencilTool_206 {
+            get {
+                object obj = ResourceManager.GetObject("PencilTool_206", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap RectangleTool_212 {
+            get {
+                object obj = ResourceManager.GetObject("RectangleTool_212", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap ReloadXML_7509 {
+            get {
+                object obj = ResourceManager.GetObject("ReloadXML_7509", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

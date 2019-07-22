@@ -55,5 +55,25 @@ namespace TMC.Core
             FlipX = flipX;
             FlipY = flipY;
         }
+
+		/// <summary>
+		/// Copy constructor
+		/// </summary>
+		/// <param name="other"></param>
+		public TilemapEntry(TilemapEntry other) 
+		{
+			this.Index = other.Index;
+			this.Palette = other.Palette;
+			this.FlipX = other.FlipX;
+			this.FlipY = other.FlipY;
+		}
+		
+
+		public static bool operator ==(TilemapEntry left, TilemapEntry right) {
+			return left.Index == right.Index && left.FlipX == right.FlipX && left.FlipY == right.FlipY;
+		}
+		public static bool operator !=(TilemapEntry left, TilemapEntry right) {
+			return left.Index != right.Index || left.FlipX != right.FlipX || left.FlipY != right.FlipY;
+		}
     }
 }
