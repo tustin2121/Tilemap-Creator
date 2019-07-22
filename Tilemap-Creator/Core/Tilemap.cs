@@ -374,8 +374,10 @@ namespace TMC.Core
 
             for (int y = srcY; y < srcY + srcHeight; y++)
             {
+				if (y < 0 || y >= this.height) continue;
                 for (int x = srcX; x < srcX + srcWidth; x++)
                 {
+					if (x < 0 || x >= this.width) continue;
                     ref var tile = ref this[x, y];
                     ref var sprite = ref tileset[tile.Index];
 
